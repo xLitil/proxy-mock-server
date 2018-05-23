@@ -52,9 +52,9 @@ workflows:
   build-and-deploy:
     jobs:
       - build
+      - hold:
+          type: approval
+          requires: build
       - deploy:
           requires:
-            - build
-          filters:
-            branches:
-              only: sequential-branch-filter
+            - hold
