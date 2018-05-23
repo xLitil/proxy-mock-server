@@ -19,7 +19,7 @@ jobs: # a collection of steps
             - ~/.m2
           key: circleci-proxy-mock-server-{{ checksum "pom.xml" }}
 
-      - run: mvn deploy
+      - run: mvn -s .circleci/settings.xml deploy
 
       - store_test_results: # uploads the test metadata from the `target/surefire-reports` directory so that it can show up in the CircleCI dashboard.
           path: target/surefire-reports
