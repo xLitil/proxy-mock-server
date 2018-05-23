@@ -2,8 +2,8 @@
     <servers>
         <server>
             <id>ossrh</id>
-            <username>${env.sonatype-jira-username}</username>
-            <password>${env.sonatype-jira-pwd}</password>
+            <username>${env.sonatype_jira_username}</username>
+            <password>${env.sonatype_jira_pwd}</password>
         </server>
     </servers>
 </settings>
