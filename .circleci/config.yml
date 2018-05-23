@@ -25,6 +25,5 @@ jobs: # a collection of steps
           path: target/surefire-reports
 
       - store_artifacts:
-          paths:
-            - target/*.jar
+          path: target/*.jar
       # See https://circleci.com/docs/2.0/deployment-integrations/ for deploy examples
