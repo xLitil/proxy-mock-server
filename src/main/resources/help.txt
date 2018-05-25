@@ -1,0 +1,3 @@
+<a href="/mock/command/status">status</a>
+<a href="/mock/command/record">record</a>
+<a href="/mock/command/play">play</a>

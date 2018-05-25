@@ -23,7 +23,7 @@ public class MockPlayer {
         List<Expectation> loadedExpectations = ExpectationUtil.loadExpectations(expectationsDirectory);
         for(Expectation e:loadedExpectations) {
             mockServer
-                    .when(e.getHttpRequest())
+                    .when(e.getHttpRequest(), e.getTimes(), e.getTimeToLive())
                     .respond(e.getHttpResponse());
         }
     }

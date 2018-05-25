@@ -1,9 +1,7 @@
+import org.apache.commons.io.FileUtils;
 import org.mockserver.client.serialization.ExpectationSerializer;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -17,6 +15,11 @@ public class FileUtil {
         File directory = new File(directoryName);
 
         File[] fList = directory.listFiles();
+
+        if (fList == null) {
+            return;
+        }
+
         for (File file : fList) {
             if (file.isFile()) {
                 if (file.getName().matches(regex)) {
@@ -42,8 +45,16 @@ public class FileUtil {
 
     public static String escapeFileName(String name) {
         return name
-                .replaceAll("/", ".slash.")
-                .replaceAll("[^\\w\\.]", "_");
+                .replaceAll("[^A-Za-z0-9\\.]", "_");
     }
 
+    public static String readFileFromClasspath(String filename) {
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        File file = new File(classLoader.getResource(filename).getFile());
+        try {
+            return FileUtils.readFileToString(file, Charset.forName("utf-8"));
+        } catch (IOException e) {
+            throw new RuntimeException("Impossible de lire le fichier depuis le classpath", e);
+        }
+    }
 }
