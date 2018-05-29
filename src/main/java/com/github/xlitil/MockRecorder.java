@@ -1,8 +1,8 @@
+package com.github.xlitil;
+
 import org.mockserver.integration.ClientAndProxy;
 import org.mockserver.mock.Expectation;
-import org.mockserver.model.Header;
 import org.mockserver.model.HttpRequest;
-import org.mockserver.model.HttpResponse;
 import org.mockserver.model.NottableString;
 
 import java.io.IOException;
@@ -10,7 +10,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.Iterator;
 
 public class MockRecorder {
 
@@ -45,7 +44,7 @@ public class MockRecorder {
 
         int expectationOrder = 1;
         for(Expectation expectation:expectations) {
-            if (expectation.getHttpRequest().getPath().getValue().startsWith("/mock/command")) {
+            if (expectation.getHttpClassCallback() != null) {
                 continue;
             }
 

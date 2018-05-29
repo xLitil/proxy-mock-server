@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <link href='css/google-fonts.css' rel="stylesheet" type="text/css">
+    <link href="css/vuetify.min.css" rel="stylesheet" type="text/css"></link>
+
+    <title>proxy-mock-server</title>
+</head>
+<body>
+
+    <div id="app">
+        <v-app>
+            <v-navigation-drawer app></v-navigation-drawer>
+            <v-toolbar app>
+                <v-toolbar-title>proxy-mock-server</v-toolbar-title>
+            </v-toolbar>
+            <v-content>
+                <v-container fluid>
+                    <div v-if="status.mode === 'PLAY'">
+                        <span class=".body-2">Currently playing mocks</span>
+                        <v-btn color="success" v-on:click="startRecording">Start recording</v-btn>
+                    </div>
+                    <div v-if="status.mode === 'RECORD'">
+                        <span class=".body-2">Currently recording</span>
+                        <v-btn color="success" v-on:click="stopRecording">Stop recording</v-btn>
+                    </div>
+                    <span class=".body-2">Mocks stored in : {{ status.expectationsDirectory}} </span>
+                </v-container>
+                <v-expansion-panel v-on:click="getExpectations">
+                    <v-expansion-panel-content >
+                        <div slot="header">Expectations {{status.nbExpectations}}</div>
+                        <v-data-table
+                                :headers="headers"
+                                :items="expectations"
+                                hide-actions
+                                class="elevation-1"
+                        >
+                            <template slot="items" slot-scope="props">
+                                <td>{{ props.item.index }}</td>
+                                <td class="text-xs-right">{{ props.item.host }}</td>
+                                <td class="text-xs-right">{{ props.item.path }}</td>
+                                <td class="text-xs-right">{{ props.item.filename }}</td>
+                            </template>
+                        </v-data-table>
+                    </v-expansion-panel-content>
+                </v-expansion-panel>
+            </v-content>
+            <v-footer app></v-footer>
+        </v-app>
+    </div>
+
+
+    <script src="js/vue.js"></script>
+    <script src="js/vuetify.js"></script>
+
+    <script>
+    var data = {
+        status: {
+            mode: null,
+            nbExpectations: null,
+        },
+        headers: [
+            { text: '#', value: 'index' },
+            { text: 'host', value: 'host' },
+            { text: 'path', value: 'path' },
+            { text: 'filename', value: 'filename' }
+        ],
+        expectations: []
+    };
+
+    Vue.component('page', {
+      template: '#page'
+    })
+    new Vue({
+        el: '#app',
+        data: data,
+        created: function () {
+            fetch('status')
+                .then(function(response) {
+                    return response.json().then(function(json) {
+                        data.status = json;
+                    });
+                });
+
+            fetch('status/expectations')
+                .then(function(response) {
+                    return response.json().then(function(json) {
+                        data.expectations = json;
+                    });
+                })
+        },
+        methods: {
+            startRecording: function(event) {
+                fetch('record')
+                    .then(function(response) {
+                        return response.json().then(function(json) {
+                            data.status = json;
+                        });
+                    })
+            },
+            stopRecording: function(event) {
+                fetch('play')
+                    .then(function(response) {
+                        return response.json().then(function(json) {
+                            data.status = json;
+                        });
+                    })
+            },
+            getExpectations: function(event) {
+                fetch('status/expectations')
+                    .then(function(response) {
+                        return response.json().then(function(json) {
+                            data.expectations = json;
+                        });
+                    })
+            },
+      }
+    })
+
+    </script>
+
+</body>
+</html>

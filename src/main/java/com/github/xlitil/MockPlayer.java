@@ -1,3 +1,5 @@
+package com.github.xlitil;
+
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.mock.Expectation;
 
@@ -26,6 +28,7 @@ public class MockPlayer {
                     .when(e.getHttpRequest(), e.getTimes(), e.getTimeToLive())
                     .respond(e.getHttpResponse());
         }
+
     }
 
     public void stop() {

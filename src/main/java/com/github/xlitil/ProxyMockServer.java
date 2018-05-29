@@ -1,3 +1,7 @@
+package com.github.xlitil;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.cli.*;
 import org.mockserver.client.AbstractClient;
 import org.mockserver.mock.Expectation;
@@ -9,16 +13,18 @@ import org.mockserver.model.HttpStatusCode;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ProxyMockServer {
     public static final String DEFAULT_EXPECTATIONS_DIRECTORY = Paths.get(System.getProperty("java.io.tmpdir") + "/mocks").toString();
+
     private static int port;
-    private static String expectationsDirectory;
 
     private static MockRecorder mockRecorder;
     private static MockPlayer mockPlayer;
 
-    private static Mode currentMode;
+    private static ProxyMockServerStatus status;
 
     public static void main(String[] args) throws Exception {
         Options options = getCommandLineOptions();
@@ -30,10 +36,13 @@ public class ProxyMockServer {
             port = SocketUtil.getFreePort(
                     Integer.parseInt(cmd.getOptionValue("port")),
                     Integer.parseInt(cmd.getOptionValue("port")));
-            expectationsDirectory = cmd.getOptionValue("expectationsPath", DEFAULT_EXPECTATIONS_DIRECTORY);
 
-            currentMode = Mode.PLAY;
-            mockPlayer = new MockPlayer(port, expectationsDirectory);
+            status = new ProxyMockServerStatus();
+
+            status.setExpectationsDirectory(cmd.getOptionValue("expectationsPath", DEFAULT_EXPECTATIONS_DIRECTORY));
+
+            status.setCurrentMode(Mode.PLAY);
+            mockPlayer = new MockPlayer(port, status.getExpectationsDirectory());
             mockPlayer.start();
             registerCommands(mockPlayer.mockServer);
 
@@ -80,7 +89,7 @@ public class ProxyMockServer {
         abstractClient
                 .when(
                         HttpRequest.request()
-                                .withPath("/mock/command/.*")
+                                .withPath("/proxy-mock-server/.*")
                 )
                 .callback(httpClassCallback);
         abstractClient
@@ -97,34 +106,32 @@ public class ProxyMockServer {
 
         @Override
         public HttpResponse handle(HttpRequest httpRequest) {
-            if (
-                    "/".equals(httpRequest.getPath().getValue())
-                    || httpRequest.getPath().getValue().endsWith("help")) {
+            if ("/".equals(httpRequest.getPath().getValue())) {
                 return HttpResponse.response()
                         .withStatusCode(HttpStatusCode.OK_200.code())
                         .withBody(
-                                FileUtil.readFileFromClasspath("help.txt")
+                                FileUtil.readFileFromClasspath("www/index.html")
                         );
 
+
             } else if (httpRequest.getPath().getValue().endsWith("/record")) {
-                if (currentMode != Mode.RECORD) {
-                    currentMode = Mode.RECORD;
+                if (status.getCurrentMode() != Mode.RECORD) {
+                    status.setCurrentMode(Mode.RECORD);
 
                     mockPlayer.stop();
                     if (mockRecorder == null) {
-                        mockRecorder = new MockRecorder(port, expectationsDirectory);
+                        mockRecorder = new MockRecorder(port, status.getExpectationsDirectory());
 
                     }
                     mockRecorder.start();
                     registerCommands(mockRecorder.proxy);
                 }
-                return HttpResponse.response()
-                        .withStatusCode(HttpStatusCode.OK_200.code())
-                        .withBody(String.format("{ 'mode' : '%s' }", currentMode));
+                StatusDTO statusDTO = getStatusDTO();
+                return sendJson(statusDTO);
 
             } else if (httpRequest.getPath().getValue().endsWith("/play")) {
-                if (currentMode != Mode.PLAY) {
-                    currentMode = Mode.PLAY;
+                if (status.getCurrentMode() != Mode.PLAY) {
+                    status.setCurrentMode(Mode.PLAY);
                     try {
                         mockRecorder.stop();
                         mockPlayer.start();
@@ -141,25 +148,74 @@ public class ProxyMockServer {
                         throw new RuntimeException("Aïe", e);
                     }
                 }
-                return HttpResponse.response()
-                        .withStatusCode(HttpStatusCode.OK_200.code())
-                        .withBody(String.format("{ 'mode' : '%s' }", currentMode));
+                StatusDTO statusDTO = getStatusDTO();
+                return sendJson(statusDTO);
 
-            } else if (httpRequest.getPath().getValue().endsWith("status")) {
-                Expectation[] expectations = mockPlayer.mockServer.retrieveRecordedExpectations(HttpRequest.request());
-                for(Expectation expectation:expectations) {
+            } else if (httpRequest.getPath().getValue().endsWith("/status")) {
+                StatusDTO statusDTO = getStatusDTO();
+                return sendJson(statusDTO);
 
+            } else if (httpRequest.getPath().getValue().endsWith("/status/expectations")) {
+                Expectation[] expectations = mockPlayer.mockServer.retrieveActiveExpectations(HttpRequest.request());
+
+                List<ExpectationDTO> expectationDTOs = new ArrayList<>();
+                int i = 0;
+                for (Expectation expectation:expectations) {
+                    ExpectationDTO expectationDTO = new ExpectationDTO();
+                    expectationDTO.setIndex(i);
+                    expectationDTO.setHost(expectation.getHttpRequest().getFirstHeader("host"));
+                    expectationDTO.setPath(expectation.getHttpRequest().getPath().getValue());
+                    expectationDTO.setFilename("todo");
+
+                    expectationDTOs.add(expectationDTO);
+                    i++;
                 }
 
+                return sendJson(expectationDTOs);
+
+            } else if (httpRequest.getPath().getValue().startsWith("/proxy-mock-server")) {
+                String wwwPath = httpRequest.getPath().getValue().replaceAll("/proxy-mock-server/(.*)$", "www/$1");
                 return HttpResponse.response()
                         .withStatusCode(HttpStatusCode.OK_200.code())
-                        .withBody(String.format("{ 'mode' : '%s' }", currentMode));
+                        .withBody(
+                                FileUtil.readFileFromClasspath(wwwPath)
+                        );
 
             } else {
                 return HttpResponse
                         .notFoundResponse()
                         .withBody("Command not found");
             }
+        }
+
+        private HttpResponse sendJson(Object obj) {
+            String s = getJsonString(obj);
+            return HttpResponse.response()
+                    .withStatusCode(HttpStatusCode.OK_200.code())
+                    .withHeader("content-type", "application/json")
+                    .withBody(s);
+        }
+
+        private String getJsonString(Object object) {
+            ObjectMapper objectMapper = new ObjectMapper();
+            String s = null;
+            try {
+                s = objectMapper.writeValueAsString(object);
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+                s="";
+            }
+            return s;
+        }
+
+        private StatusDTO getStatusDTO() {
+            Expectation[] expectations = mockPlayer.mockServer.retrieveActiveExpectations(HttpRequest.request());
+
+            StatusDTO statusDTO = new StatusDTO();
+            statusDTO.setMode(status.getCurrentMode());
+            statusDTO.setExpectationsDirectory(status.getExpectationsDirectory());
+            statusDTO.setNbExpectations(expectations.length);
+            return statusDTO;
         }
     }
 

@@ -1,3 +1,5 @@
+package com.github.xlitil;
+
 import org.mockserver.client.serialization.ExpectationSerializer;
 import org.mockserver.mock.Expectation;
 

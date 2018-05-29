@@ -1,3 +1,5 @@
+package com.github.xlitil;
+
 import org.apache.commons.io.FileUtils;
 import org.mockserver.client.serialization.ExpectationSerializer;
 
