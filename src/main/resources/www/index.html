@@ -15,7 +15,13 @@
 
     <div id="app">
         <v-app>
-            <v-navigation-drawer app></v-navigation-drawer>
+            <v-snackbar
+                    :timeout="3000"
+                    :top="true"
+                    v-model="snackbar.show">
+                {{ snackbar.text }}
+                <v-btn flat color="pink" @click.native="snackbar.show = false">Close</v-btn>
+            </v-snackbar>
             <v-toolbar app>
                 <v-toolbar-title>proxy-mock-server</v-toolbar-title>
             </v-toolbar>
@@ -23,32 +29,58 @@
                 <v-container fluid>
                     <div v-if="status.mode === 'PLAY'">
                         <span class=".body-2">Currently playing mocks</span>
-                        <v-btn color="success" v-on:click="startRecording">Start recording</v-btn>
+
+                        <v-btn id="copyExpectations" flat icon color="gray" v-on:click="startRecording">
+                            <v-icon>mic</v-icon>
+                        </v-btn>
+                        <v-btn id="copyExpectations" flat icon color="gray" v-on:click="stopRecording">
+                            <v-icon>replay</v-icon>
+                        </v-btn>
+
                     </div>
                     <div v-if="status.mode === 'RECORD'">
                         <span class=".body-2">Currently recording</span>
-                        <v-btn color="success" v-on:click="stopRecording">Stop recording</v-btn>
+                        <v-btn id="copyExpectations" flat icon color="gray" v-on:click="stopRecording">
+                            <v-icon>stop</v-icon>
+                        </v-btn>
                     </div>
-                    <span class=".body-2">Mocks stored in : {{ status.expectationsDirectory}} </span>
+                    <span class=".body-2">Mocks stored in : {{ status.expectationsDirectory}}</span>
+                    <v-btn id="copyExpectations" flat icon color="gray" :data-clipboard-text="status.expectationsDirectory">
+                        <v-icon>file_copy</v-icon>
+                    </v-btn>
                 </v-container>
-                <v-expansion-panel v-on:click="getExpectations">
-                    <v-expansion-panel-content >
-                        <div slot="header">Expectations {{status.nbExpectations}}</div>
-                        <v-data-table
-                                :headers="headers"
-                                :items="expectations"
-                                hide-actions
-                                class="elevation-1"
-                        >
-                            <template slot="items" slot-scope="props">
-                                <td>{{ props.item.index }}</td>
-                                <td class="text-xs-right">{{ props.item.host }}</td>
-                                <td class="text-xs-right">{{ props.item.path }}</td>
-                                <td class="text-xs-right">{{ props.item.filename }}</td>
-                            </template>
-                        </v-data-table>
-                    </v-expansion-panel-content>
-                </v-expansion-panel>
+                <v-card>
+                    <v-card-title>
+                        # Mocks : {{ Object.keys(status.expectations).length }}
+                        <v-spacer></v-spacer>
+                        <v-text-field
+                                v-model="search"
+                                append-icon="search"
+                                label="Search"
+                                single-line
+                                hide-details
+                        ></v-text-field>
+                    </v-card-title>
+                    <v-data-table
+                            :headers="headers"
+                            :items="status.expectations"
+                            :search="search"
+                            hide-actions
+                            class="elevation-1"
+                    >
+                        <template slot="items" slot-scope="props">
+                            <td>{{ props.item.index }}</td>
+                            <td class="text-xs-left">{{ props.item.protocol }}</td>
+                            <td class="text-xs-left">{{ props.item.host }}</td>
+                            <td class="text-xs-left">{{ props.item.path }}</td>
+                            <td class="text-xs-left">
+                                <v-btn class="copyFileName" flat icon color="gray" :data-clipboard-text="props.item.filename">
+                                    <v-icon>file_copy</v-icon>
+                                </v-btn>
+                            </td>
+                        </template>
+                    </v-data-table>
+                </v-card>
             </v-content>
             <v-footer app></v-footer>
         </v-app>
@@ -62,20 +94,25 @@
     var data = {
         status: {
             mode: null,
-            nbExpectations: null,
+            expectations: []
         },
+        search: '',
         headers: [
             { text: '#', value: 'index' },
+            { text: 'protocol', value: 'protocol' },
             { text: 'host', value: 'host' },
             { text: 'path', value: 'path' },
             { text: 'filename', value: 'filename' }
         ],
-        expectations: []
+        snackbar: {
+            show: false,
+            text: ''
+        }
     };
 
     Vue.component('page', {
       template: '#page'
-    })
+    });
     new Vue({
         el: '#app',
         data: data,
@@ -87,18 +124,14 @@
                     });
                 });
 
-            fetch('status/expectations')
-                .then(function(response) {
-                    return response.json().then(function(json) {
-                        data.expectations = json;
-                    });
-                })
         },
         methods: {
             startRecording: function(event) {
                 fetch('record')
                     .then(function(response) {
                         return response.json().then(function(json) {
+                            data.snackbar.text = "Recording";
+                            data.snackbar.show = true;
                             data.status = json;
                         });
                     })
@@ -107,20 +140,56 @@
                 fetch('play')
                     .then(function(response) {
                         return response.json().then(function(json) {
+                            data.snackbar.text = "Play / replay";
+                            data.snackbar.show = true;
                             data.status = json;
                         });
                     })
-            },
-            getExpectations: function(event) {
-                fetch('status/expectations')
-                    .then(function(response) {
-                        return response.json().then(function(json) {
-                            data.expectations = json;
-                        });
-                    })
-            },
-      }
+            }
+        }
     })
+
+    </script>
+
+    <script src="js/clipboard.js"></script>
+
+    <script>
+        var clipboard = new ClipboardJS('#copyExpectations');
+
+        clipboard.on('success', function(e) {
+            data.snackbar.text = "Copied to clipboard";
+            data.snackbar.show = true;
+            console.info('Action:', e.action);
+            console.info('Text:', e.text);
+            console.info('Trigger:', e.trigger);
+
+            e.clearSelection();
+        });
+
+        clipboard.on('error', function(e) {
+            data.snackbar.text = "Unable to copied to clipboard";
+            data.snackbar.show = true;
+            console.error('Action:', e.action);
+            console.error('Trigger:', e.trigger);
+        });
+
+        var clipboardFilename = new ClipboardJS('.copyFileName');
+        clipboardFilename.on('success', function(e) {
+            data.snackbar.text = "Filename copied to clipboard";
+            data.snackbar.show = true;
+            console.info('Action:', e.action);
+            console.info('Text:', e.text);
+            console.info('Trigger:', e.trigger);
+
+            e.clearSelection();
+        });
+
+        clipboardFilename.on('error', function(e) {
+            data.snackbar.text = "Unable to copied filename to clipboard";
+            data.snackbar.show = true;
+            console.error('Action:', e.action);
+            console.error('Trigger:', e.trigger);
+        });
 
     </script>
 

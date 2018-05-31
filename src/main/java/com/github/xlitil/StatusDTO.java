@@ -1,10 +1,12 @@
 package com.github.xlitil;
 
+import java.util.List;
+
 public class StatusDTO {
 
     private String expectationsDirectory;
     private Mode mode;
-    private int nbExpectations;
+    private List<ExpectationDTO> expectations;
 
     public String getExpectationsDirectory() {
         return expectationsDirectory;
@@ -22,11 +24,11 @@ public class StatusDTO {
         this.mode = mode;
     }
 
-    public int getNbExpectations() {
-        return nbExpectations;
+    public List<ExpectationDTO> getExpectations() {
+        return expectations;
     }
 
-    public void setNbExpectations(int nbExpectations) {
-        this.nbExpectations = nbExpectations;
+    public void setExpectations(List<ExpectationDTO> expectations) {
+        this.expectations = expectations;
     }
 }

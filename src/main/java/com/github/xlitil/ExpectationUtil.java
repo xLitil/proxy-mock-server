@@ -1,5 +1,6 @@
 package com.github.xlitil;
 
+import org.mockserver.client.AbstractClient;
 import org.mockserver.client.serialization.ExpectationSerializer;
 import org.mockserver.mock.Expectation;
 
@@ -31,6 +32,22 @@ public class ExpectationUtil {
         }
 
         return loadedExpectations;
+    }
+
+    public static List<Expectation> getActivesExpectations(AbstractClient client) {
+        Expectation[] allActiveExpectations = client.retrieveActiveExpectations(null);
+
+        List<Expectation> expectations = new ArrayList<>();
+        for(Expectation expectation:allActiveExpectations) {
+            if (expectation.getHttpClassCallback() != null) {
+                continue;
+            }
+
+            expectations.add(expectation);
+
+        }
+
+        return expectations;
     }
 
 }

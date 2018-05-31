@@ -5,6 +5,7 @@ public class ExpectationDTO {
     private int index;
     private String host;
     private String path;
+    private String protocol;
     private String filename;
 
     public int getIndex() {
@@ -37,5 +38,13 @@ public class ExpectationDTO {
 
     public void setFilename(String filename) {
         this.filename = filename;
+    }
+
+    public String getProtocol() {
+        return protocol;
+    }
+
+    public void setProtocol(String protocol) {
+        this.protocol = protocol;
     }
 }

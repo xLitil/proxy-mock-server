@@ -29,13 +29,6 @@ public class MockRecorder {
 
     public void stop() throws IOException {
         saveExpectation(expectationsDirectory);
-/*
-            System.out.println(String.format("-- rqtHost : %s ---------------------", rqtHost));
-            System.out.println(String.format("===> " + fileName));
-            System.out.println(expectationSerializer.serialize(expectation));
-            System.out.println("__________________________________");
-*/
-
         proxy.stop();
     }
 
@@ -52,19 +45,20 @@ public class MockRecorder {
             String rqtHost = getFirstHeaderValue(expectation.getHttpRequest(), "host", "unknown");
             NottableString rqtPath = expectation.getHttpRequest().getPath();
 
-            Path filename = Paths.get(
-                    expectationsDirectory,
-                    FileUtil.escapeFileName(rqtHost),
-                    FileUtil.escapeFileName(expectationOrder + "_" + rqtPath.getValue()) + ".expectation.current.json");
+            String filename = FileUtil.escapeFileName(expectationOrder + "_" + FileUtil.escapeFileName(rqtHost) + "_" + rqtPath.getValue()) + ".expectation.current.json";
+            expectation.getHttpResponse().replaceHeader("x-mock-filename", filename);
 
-            System.out.println("===> " + filename);
-            if (Files.exists(filename)) {
-                Files.copy(filename,
-                        filename.resolveSibling(FileUtil.escapeFileName(rqtPath.getValue()) + ".expectation.previous.json"),
+            Path filenamePath = Paths.get(
+                    expectationsDirectory,
+                    filename);
+
+            if (Files.exists(filenamePath)) {
+                Files.copy(filenamePath,
+                        filenamePath.resolveSibling(FileUtil.escapeFileName(rqtPath.getValue()) + ".expectation.previous.json"),
                         StandardCopyOption.REPLACE_EXISTING);
             }
 
-            ExpectationUtil.saveExpectation(expectation, filename);
+            ExpectationUtil.saveExpectation(expectation, filenamePath);
             expectationOrder++;
         }
     }

@@ -52,6 +52,9 @@ public class FileUtil {
 
     public static String readFileFromClasspath(String filename) {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        if (classLoader.getResource(filename) == null) {
+            throw new RuntimeException("Fichier " + filename + " non trouvé");
+        }
         File file = new File(classLoader.getResource(filename).getFile());
         try {
             return FileUtils.readFileToString(file, Charset.forName("utf-8"));
