@@ -2,8 +2,12 @@ package com.github.xlitil;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.xlitil.model.ExpectationDTO;
+import com.github.xlitil.model.Mode;
+import com.github.xlitil.model.StatusDTO;
 import org.apache.commons.cli.*;
 import org.mockserver.client.AbstractClient;
+import org.mockserver.configuration.ConfigurationProperties;
 import org.mockserver.mock.Expectation;
 import org.mockserver.mock.action.ExpectationCallback;
 import org.mockserver.model.HttpClassCallback;
@@ -26,7 +30,11 @@ public class ProxyMockServer {
 
     private static ProxyMockServerStatus status;
 
+    private static ExpectationDetail[] expectationDetails = new ExpectationDetail[] {new ExpectationDetailSoap()};
+
     public static void main(String[] args) throws Exception {
+        ConfigurationProperties.maxExpectations(1000);
+
         Options options = getCommandLineOptions();
         CommandLineParser parser = new DefaultParser();
         CommandLine cmd;
@@ -216,6 +224,14 @@ public class ProxyMockServer {
                                 expectation.getHttpResponse().getFirstHeader("x-mock-filename")).toString()
                 );
                 expectationDTO.setProtocol(expectation.getHttpRequest().isSecure() != null && expectation.getHttpRequest().isSecure() ? "HTTPS" : "HTTP");
+
+                for (ExpectationDetail expectationDetail:expectationDetails) {
+                    String detail = expectationDetail.getDetail(expectation);
+                    if (detail != null) {
+                        expectationDTO.setDetail(detail);
+                        break;
+                    }
+                }
 
                 activeExpectationsDTO.add(expectationDTO);
                 i++;

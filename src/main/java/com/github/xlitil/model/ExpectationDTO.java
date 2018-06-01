@@ -1,4 +1,4 @@
-package com.github.xlitil;
+package com.github.xlitil.model;
 
 public class ExpectationDTO {
 
@@ -6,6 +6,7 @@ public class ExpectationDTO {
     private String host;
     private String path;
     private String protocol;
+    private String detail;
     private String filename;
 
     public int getIndex() {
@@ -46,5 +47,13 @@ public class ExpectationDTO {
 
     public void setProtocol(String protocol) {
         this.protocol = protocol;
+    }
+
+    public String getDetail() {
+        return detail;
+    }
+
+    public void setDetail(String detail) {
+        this.detail = detail;
     }
 }

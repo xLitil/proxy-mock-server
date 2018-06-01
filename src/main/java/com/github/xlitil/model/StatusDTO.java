@@ -1,4 +1,4 @@
-package com.github.xlitil;
+package com.github.xlitil.model;
 
 import java.util.List;
 

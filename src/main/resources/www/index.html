@@ -45,6 +45,9 @@
                     <v-btn id="copyExpectations" flat icon color="gray" :data-clipboard-text="status.expectationsDirectory">
                         <v-icon>file_copy</v-icon>
                     </v-btn>
+                    <v-btn flat icon color="gray" v-on:click="refreshStatus">
+                        <v-icon>refresh</v-icon>
+                    </v-btn>
                 </v-container>
                 <v-card>
                     <v-card-title>
@@ -70,6 +73,7 @@
                             <td class="text-xs-left">{{ props.item.protocol }}</td>
                             <td class="text-xs-left">{{ props.item.host }}</td>
                             <td class="text-xs-left">{{ props.item.path }}</td>
+                            <td class="text-xs-left">{{ props.item.detail }}</td>
                             <td class="text-xs-left">
                                 <v-btn class="copyFileName" flat icon color="gray" :data-clipboard-text="props.item.filename">
                                     <v-icon>file_copy</v-icon>
@@ -78,6 +82,42 @@
                         </template>
                     </v-data-table>
                 </v-card>
+
+                <v-card>
+                    <v-card-title>
+                        # Recorded request : {{ Object.keys(status.recordedExpectations).length }}
+                        <v-spacer></v-spacer>
+                        <v-text-field
+                                v-model="search"
+                                append-icon="search"
+                                label="Search"
+                                single-line
+                                hide-details
+                        ></v-text-field>
+                    </v-card-title>
+                    <v-data-table
+                            :headers="headers"
+                            :items="status.recordedExpectations"
+                            :search="search"
+                            hide-actions
+                            class="elevation-1"
+                    >
+                        <template slot="items" slot-scope="props">
+                            <td>{{ props.item.index }}</td>
+                            <td class="text-xs-left">{{ props.item.protocol }}</td>
+                            <td class="text-xs-left">{{ props.item.host }}</td>
+                            <td class="text-xs-left">{{ props.item.path }}</td>
+                            <td class="text-xs-left">{{ props.item.detail }}</td>
+                            <td class="text-xs-left">
+                                <v-btn class="copyFileName" flat icon color="gray" :data-clipboard-text="props.item.filename">
+                                    <v-icon>file_copy</v-icon>
+                                </v-btn>
+                            </td>
+                        </template>
+                    </v-data-table>
+                </v-card>
+
+
             </v-content>
             <v-footer app></v-footer>
         </v-app>
@@ -91,7 +131,8 @@
     var data = {
         status: {
             mode: null,
-            activeExpectations: []
+            activeExpectations: [],
+            recordedExpectations: []
         },
         search: '',
         headers: [
@@ -99,6 +140,7 @@
             { text: 'protocol', value: 'protocol' },
             { text: 'host', value: 'host' },
             { text: 'path', value: 'path' },
+            { text: 'detail', value: 'detail' },
             { text: 'filename', value: 'filename' }
         ],
         snackbar: {
@@ -119,8 +161,12 @@
                     return response.json().then(function(json) {
                         data.status = json;
                     });
+                })
+                .catch(function(error) {
+                    data.snackbar.text = "An error occured, see logs for more information";
+                    data.snackbar.show = true;
+                    data.status = json;
                 });
-
         },
         methods: {
             startRecording: function(event) {
@@ -132,6 +178,11 @@
                             data.status = json;
                         });
                     })
+                    .catch(function(error) {
+                        data.snackbar.text = "An error occured, see logs for more information";
+                        data.snackbar.show = true;
+                        data.status = json;
+                    });
             },
             stopRecording: function(event) {
                 fetch('play')
@@ -140,8 +191,28 @@
                             data.snackbar.text = "Play / replay";
                             data.snackbar.show = true;
                             data.status = json;
-                        });
+                        })
                     })
+                    .catch(function(error) {
+                        data.snackbar.text = "An error occured, see logs for more information";
+                        data.snackbar.show = true;
+                        data.status = json;
+                    });
+            },
+            refreshStatus: function(event) {
+                fetch('status')
+                    .then(function(response) {
+                        return response.json().then(function(json) {
+                            data.snackbar.text = "Status refreshed";
+                            data.snackbar.show = true;
+                            data.status = json;
+                        })
+                    })
+                    .catch(function(error) {
+                        data.snackbar.text = "An error occured, see logs for more information";
+                        data.snackbar.show = true;
+                        data.status = json;
+                    });
             }
         }
     })

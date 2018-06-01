@@ -1,5 +1,7 @@
 package com.github.xlitil;
 
+import com.github.xlitil.model.Mode;
+
 public class ProxyMockServerStatus {
 
     private String expectationsDirectory;
