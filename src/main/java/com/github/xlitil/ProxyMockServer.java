@@ -101,6 +101,7 @@ public class ProxyMockServer {
                         HttpResponse.response()
                                 .withStatusCode(HttpStatusCode.FOUND_302.code())
                                 .withHeader("Location", "/proxy-mock-server/index.html")
+                                .withHeader("x-pms-exclude-from-expectations", "true")
                 );
 
     }
@@ -201,10 +202,10 @@ public class ProxyMockServer {
             statusDTO.setExpectationsDirectory(status.getExpectationsDirectory());
 
 
-            List<ExpectationDTO> expectationDTOs = new ArrayList<>();
-            List<Expectation> expectations = ExpectationUtil.getActivesExpectations(mockPlayer.proxy);
+            List<ExpectationDTO> activeExpectationsDTO = new ArrayList<>();
+            List<Expectation> activeExpectations = ExpectationUtil.getActivesExpectations(mockPlayer.proxy);
             int i = 0;
-            for (Expectation expectation:expectations) {
+            for (Expectation expectation:activeExpectations) {
                 ExpectationDTO expectationDTO = new ExpectationDTO();
                 expectationDTO.setIndex(i);
                 expectationDTO.setHost(expectation.getHttpRequest().getFirstHeader("host"));
@@ -216,10 +217,32 @@ public class ProxyMockServer {
                 );
                 expectationDTO.setProtocol(expectation.getHttpRequest().isSecure() != null && expectation.getHttpRequest().isSecure() ? "HTTPS" : "HTTP");
 
-                expectationDTOs.add(expectationDTO);
+                activeExpectationsDTO.add(expectationDTO);
                 i++;
             }
-            statusDTO.setExpectations(expectationDTOs);
+            statusDTO.setActiveExpectations(activeExpectationsDTO);
+
+            List<ExpectationDTO> recordedExpectationsDTO = new ArrayList<>();
+            List<Expectation> recordedExpectations = ExpectationUtil.getRecordedExpectations(mockPlayer.proxy);
+            i = 0;
+            for (Expectation expectation:recordedExpectations) {
+                ExpectationDTO expectationDTO = new ExpectationDTO();
+                expectationDTO.setIndex(i);
+                expectationDTO.setHost(expectation.getHttpRequest().getFirstHeader("host"));
+                expectationDTO.setPath(expectation.getHttpRequest().getPath().getValue());
+                if (expectation.getHttpResponse().getFirstHeader("x-mock-filename") != null) {
+                    expectationDTO.setFilename(
+                            Paths.get(
+                                    status.getExpectationsDirectory(),
+                                    expectation.getHttpResponse().getFirstHeader("x-mock-filename")).toString()
+                    );
+                }
+                expectationDTO.setProtocol(expectation.getHttpRequest().isSecure() != null && expectation.getHttpRequest().isSecure() ? "HTTPS" : "HTTP");
+
+                recordedExpectationsDTO.add(expectationDTO);
+                i++;
+            }
+            statusDTO.setRecordedExpectations(recordedExpectationsDTO);
 
             return statusDTO;
         }

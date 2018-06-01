@@ -6,7 +6,8 @@ public class StatusDTO {
 
     private String expectationsDirectory;
     private Mode mode;
-    private List<ExpectationDTO> expectations;
+    private List<ExpectationDTO> activeExpectations;
+    private List<ExpectationDTO> recordedExpectations;
 
     public String getExpectationsDirectory() {
         return expectationsDirectory;
@@ -24,11 +25,19 @@ public class StatusDTO {
         this.mode = mode;
     }
 
-    public List<ExpectationDTO> getExpectations() {
-        return expectations;
+    public List<ExpectationDTO> getActiveExpectations() {
+        return activeExpectations;
     }
 
-    public void setExpectations(List<ExpectationDTO> expectations) {
-        this.expectations = expectations;
+    public void setActiveExpectations(List<ExpectationDTO> activeExpectations) {
+        this.activeExpectations = activeExpectations;
+    }
+
+    public List<ExpectationDTO> getRecordedExpectations() {
+        return recordedExpectations;
+    }
+
+    public void setRecordedExpectations(List<ExpectationDTO> recordedExpectations) {
+        this.recordedExpectations = recordedExpectations;
     }
 }

@@ -6,7 +6,7 @@
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
 
-    <link href='css/google-fonts.css' rel="stylesheet" type="text/css">
+    <link href='https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons' rel="stylesheet">
     <link href="css/vuetify.min.css" rel="stylesheet" type="text/css"></link>
 
     <title>proxy-mock-server</title>
@@ -23,27 +23,24 @@
                 <v-btn flat color="pink" @click.native="snackbar.show = false">Close</v-btn>
             </v-snackbar>
             <v-toolbar app>
-                <v-toolbar-title>proxy-mock-server</v-toolbar-title>
+                <v-toolbar-title>
+                    proxy-mock-server
+                    <span v-if="status.mode === 'PLAY'"> - Currently playing mocks</span>
+                    <v-btn v-if="status.mode === 'PLAY'" id="copyExpectations" color="primary" v-on:click="startRecording">
+                        Record
+                    </v-btn>
+                    <v-btn v-if="status.mode === 'PLAY'" id="copyExpectations" color="primary" v-on:click="stopRecording">
+                        Reload mocks
+                    </v-btn>
+
+                    <span v-if="status.mode === 'RECORD'"> - Currently recording</span>
+                    <v-btn v-if="status.mode === 'RECORD'" id="copyExpectations" color="primary" v-on:click="stopRecording">
+                        Stop recording
+                    </v-btn>
+                </v-toolbar-title>
             </v-toolbar>
             <v-content>
                 <v-container fluid>
-                    <div v-if="status.mode === 'PLAY'">
-                        <span class=".body-2">Currently playing mocks</span>
-
-                        <v-btn id="copyExpectations" flat icon color="gray" v-on:click="startRecording">
-                            <v-icon>mic</v-icon>
-                        </v-btn>
-                        <v-btn id="copyExpectations" flat icon color="gray" v-on:click="stopRecording">
-                            <v-icon>replay</v-icon>
-                        </v-btn>
-
-                    </div>
-                    <div v-if="status.mode === 'RECORD'">
-                        <span class=".body-2">Currently recording</span>
-                        <v-btn id="copyExpectations" flat icon color="gray" v-on:click="stopRecording">
-                            <v-icon>stop</v-icon>
-                        </v-btn>
-                    </div>
                     <span class=".body-2">Mocks stored in : {{ status.expectationsDirectory}}</span>
                     <v-btn id="copyExpectations" flat icon color="gray" :data-clipboard-text="status.expectationsDirectory">
                         <v-icon>file_copy</v-icon>
@@ -51,7 +48,7 @@
                 </v-container>
                 <v-card>
                     <v-card-title>
-                        # Mocks : {{ Object.keys(status.expectations).length }}
+                        # Active mocks : {{ Object.keys(status.activeExpectations).length }}
                         <v-spacer></v-spacer>
                         <v-text-field
                                 v-model="search"
@@ -63,7 +60,7 @@
                     </v-card-title>
                     <v-data-table
                             :headers="headers"
-                            :items="status.expectations"
+                            :items="status.activeExpectations"
                             :search="search"
                             hide-actions
                             class="elevation-1"
@@ -94,7 +91,7 @@
     var data = {
         status: {
             mode: null,
-            expectations: []
+            activeExpectations: []
         },
         search: '',
         headers: [

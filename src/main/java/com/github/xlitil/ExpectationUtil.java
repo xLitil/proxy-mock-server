@@ -39,7 +39,23 @@ public class ExpectationUtil {
 
         List<Expectation> expectations = new ArrayList<>();
         for(Expectation expectation:allActiveExpectations) {
-            if (expectation.getHttpClassCallback() != null) {
+            if (expectation.getHttpClassCallback() != null || "true".equals(expectation.getHttpResponse().getFirstHeader("x-pms-exclude-from-expectations"))) {
+                continue;
+            }
+
+            expectations.add(expectation);
+
+        }
+
+        return expectations;
+    }
+
+    public static List<Expectation> getRecordedExpectations(AbstractClient client) {
+        Expectation[] allActiveExpectations = client.retrieveRecordedExpectations(null);
+
+        List<Expectation> expectations = new ArrayList<>();
+        for(Expectation expectation:allActiveExpectations) {
+            if (expectation.getHttpClassCallback() != null || "true".equals(expectation.getHttpResponse().getFirstHeader("x-pms-exclude-from-expectations"))) {
                 continue;
             }
 
