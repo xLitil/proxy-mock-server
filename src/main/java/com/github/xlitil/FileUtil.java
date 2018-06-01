@@ -52,14 +52,26 @@ public class FileUtil {
 
     public static String readFileFromClasspath(String filename) {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-        if (classLoader.getResource(filename) == null) {
-            throw new RuntimeException("Fichier " + filename + " non trouvé");
+        InputStream fileStream = classLoader.getResourceAsStream(filename);
+        if (fileStream == null) {
+            throw new RuntimeException("Fichier " + filename + " non trouvé dans le classpath");
         }
-        File file = new File(classLoader.getResource(filename).getFile());
         try {
-            return FileUtils.readFileToString(file, Charset.forName("utf-8"));
+            return inputStreamToString(fileStream, Charset.forName("utf-8"));
         } catch (IOException e) {
             throw new RuntimeException("Impossible de lire le fichier depuis le classpath", e);
+        }
+    }
+
+    private static String inputStreamToString(InputStream inputStream, Charset charset) throws IOException {
+        try(ByteArrayOutputStream result = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = inputStream.read(buffer)) != -1) {
+                result.write(buffer, 0, length);
+            }
+
+            return result.toString(charset.name());
         }
     }
 }
