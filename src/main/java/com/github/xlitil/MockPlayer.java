@@ -2,9 +2,11 @@ package com.github.xlitil;
 
 import org.mockserver.integration.ClientAndProxy;
 import org.mockserver.mock.Expectation;
+import org.mockserver.model.HttpRequest;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 
 public class MockPlayer {
     private final int port;
@@ -17,28 +19,45 @@ public class MockPlayer {
         this.expectationsDirectory = expectationsDirectory;
     }
 
-    public void start() throws IOException {
+    public void start(boolean enableHeaderMatching, boolean enableBodyMatching) throws IOException {
         proxy = ClientAndProxy.startClientAndProxy(port);
 
         List<Expectation> loadedExpectations = ExpectationUtil.loadExpectations(expectationsDirectory);
-        for(Expectation e:loadedExpectations) {
+        for(Expectation loadedExpectation:loadedExpectations) {
 
-            String contentLengthStr = e.getHttpResponse().getFirstHeader("content-length");
+            String contentLengthStr = loadedExpectation.getHttpResponse().getFirstHeader("content-length");
             if (contentLengthStr != null) {
                 long currentContentLength = Long.parseLong(contentLengthStr);
-                int expectedContentLength = e.getHttpResponse().getBody().getRawBytes().length;
+                int expectedContentLength = loadedExpectation.getHttpResponse().getBody().getRawBytes().length;
                 boolean invalidContentLength = currentContentLength != expectedContentLength;
                 if (invalidContentLength) {
                     System.err.println(
-                            e.getHttpRequest().getFirstHeader("host") + " - " + e.getHttpRequest().getPath() + " - " +
+                            loadedExpectation.getHttpRequest().getFirstHeader("host") + " - " + loadedExpectation.getHttpRequest().getPath() + " - " +
                             "Invalid value for content-length header, current : " + currentContentLength + ", expected : " + expectedContentLength + ". Please fix the value");
-                    e.getHttpResponse().replaceHeader("Content-Length", "" + expectedContentLength);
+                    loadedExpectation.getHttpResponse().replaceHeader("Content-Length", "" + expectedContentLength);
                 }
             }
 
+            HttpRequest request = HttpRequest.request();
+            request
+                    .withSecure(HttpRequest.request().isSecure())
+                    .withMethod(loadedExpectation.getHttpRequest().getMethod())
+                    .withPath(loadedExpectation.getHttpRequest().getPath())
+                    .withQueryStringParameters(loadedExpectation.getHttpRequest().getQueryStringParameters())
+                    .withKeepAlive(loadedExpectation.getHttpRequest().isKeepAlive());
+            if (enableHeaderMatching) {
+                request
+                        .withHeaders(loadedExpectation.getHttpRequest().getHeaders())
+                        .withCookies(loadedExpectation.getHttpRequest().getCookies());
+            }
+            if (enableBodyMatching) {
+                request.withBody(loadedExpectation.getHttpRequest().getBody());
+            }
+
+            loadedExpectation.getHttpResponse().withHeader("x-pms-id", "" + UUID.randomUUID());
             proxy
-                    .when(e.getHttpRequest(), e.getTimes(), e.getTimeToLive())
-                    .respond(e.getHttpResponse());
+                    .when(request, loadedExpectation.getTimes(), loadedExpectation.getTimeToLive())
+                    .respond(loadedExpectation.getHttpResponse());
         }
 
     }

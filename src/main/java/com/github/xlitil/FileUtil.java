@@ -50,11 +50,11 @@ public class FileUtil {
                 .replaceAll("[^A-Za-z0-9\\.]", "_");
     }
 
-    public static String readFileFromClasspath(String filename) {
+    public static String readFileFromClasspath(String filename) throws FileNotFoundException {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         InputStream fileStream = classLoader.getResourceAsStream(filename);
         if (fileStream == null) {
-            throw new RuntimeException("Fichier " + filename + " non trouvé dans le classpath");
+            throw new FileNotFoundException("Fichier " + filename + " non trouvé dans le classpath");
         }
         try {
             return inputStreamToString(fileStream, Charset.forName("utf-8"));

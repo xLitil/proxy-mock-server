@@ -6,6 +6,9 @@ public class StatusDTO {
 
     private String expectationsDirectory;
     private Mode mode;
+    private boolean enableHeaderMatching;
+    private boolean enableBodyMatching;
+
     private List<ExpectationDTO> activeExpectations;
     private List<ExpectationDTO> recordedExpectations;
 
@@ -23,6 +26,22 @@ public class StatusDTO {
 
     public void setMode(Mode mode) {
         this.mode = mode;
+    }
+
+    public boolean isEnableHeaderMatching() {
+        return enableHeaderMatching;
+    }
+
+    public void setEnableHeaderMatching(boolean enableHeaderMatching) {
+        this.enableHeaderMatching = enableHeaderMatching;
+    }
+
+    public boolean isEnableBodyMatching() {
+        return enableBodyMatching;
+    }
+
+    public void setEnableBodyMatching(boolean enableBodyMatching) {
+        this.enableBodyMatching = enableBodyMatching;
     }
 
     public List<ExpectationDTO> getActiveExpectations() {

@@ -3,6 +3,7 @@ package com.github.xlitil;
 import org.mockserver.client.AbstractClient;
 import org.mockserver.client.serialization.ExpectationSerializer;
 import org.mockserver.mock.Expectation;
+import org.mockserver.model.HttpRequest;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,14 +29,18 @@ public class ExpectationUtil {
         List<Expectation> loadedExpectations = new ArrayList<>();
         for (File file:files) {
             String json = FileUtil.readFile(file);
-            loadedExpectations.add(expectationSerializer.deserialize(json));
+
+            Expectation expectation = expectationSerializer.deserialize(json);
+            expectation.getHttpResponse().replaceHeader("x-pms-filename", file.getName());
+
+            loadedExpectations.add(expectation);
         }
 
         return loadedExpectations;
     }
 
-    public static List<Expectation> getActivesExpectations(AbstractClient client) {
-        Expectation[] allActiveExpectations = client.retrieveActiveExpectations(null);
+    public static List<Expectation> getActivesExpectations(AbstractClient client, HttpRequest httpRequest) {
+        Expectation[] allActiveExpectations = client.retrieveActiveExpectations(httpRequest);
 
         List<Expectation> expectations = new ArrayList<>();
         for(Expectation expectation:allActiveExpectations) {
@@ -65,5 +70,21 @@ public class ExpectationUtil {
 
         return expectations;
     }
+
+    public static Expectation getExpectation(AbstractClient client, String id) {
+        List<Expectation> activeExpectations = ExpectationUtil.getActivesExpectations(
+                client, null);
+
+        Expectation found = null;
+        for (Expectation expectation:activeExpectations) {
+            if (id.equals(expectation.getHttpResponse().getFirstHeader("x-pms-id"))) {
+                found = expectation;
+                break;
+            }
+        }
+
+        return found;
+    }
+
 
 }

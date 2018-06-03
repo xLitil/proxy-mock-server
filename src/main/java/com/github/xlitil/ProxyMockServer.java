@@ -2,11 +2,13 @@ package com.github.xlitil;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.xlitil.model.EditedMockDTO;
 import com.github.xlitil.model.ExpectationDTO;
 import com.github.xlitil.model.Mode;
 import com.github.xlitil.model.StatusDTO;
 import org.apache.commons.cli.*;
 import org.mockserver.client.AbstractClient;
+import org.mockserver.client.serialization.ExpectationSerializer;
 import org.mockserver.configuration.ConfigurationProperties;
 import org.mockserver.mock.Expectation;
 import org.mockserver.mock.action.ExpectationCallback;
@@ -15,6 +17,7 @@ import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
 import org.mockserver.model.HttpStatusCode;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -51,7 +54,7 @@ public class ProxyMockServer {
 
             status.setCurrentMode(Mode.PLAY);
             mockPlayer = new MockPlayer(port, status.getExpectationsDirectory());
-            mockPlayer.start();
+            mockPlayer.start(status.isEnableHeaderMatching(), status.isEnableBodyMatching());
             registerCommands(mockPlayer.proxy);
 
         } catch (MissingOptionException e) {
@@ -119,15 +122,7 @@ public class ProxyMockServer {
 
         @Override
         public HttpResponse handle(HttpRequest httpRequest) {
-            if ("/".equals(httpRequest.getPath().getValue())) {
-                return HttpResponse.response()
-                        .withStatusCode(HttpStatusCode.OK_200.code())
-                        .withBody(
-                                FileUtil.readFileFromClasspath("www/index.html")
-                        );
-
-
-            } else if (httpRequest.getPath().getValue().endsWith("/record")) {
+            if (httpRequest.getPath().getValue().endsWith("/record")) {
                 if (status.getCurrentMode() != Mode.RECORD) {
                     status.setCurrentMode(Mode.RECORD);
 
@@ -147,7 +142,7 @@ public class ProxyMockServer {
                     status.setCurrentMode(Mode.PLAY);
                     try {
                         mockRecorder.stop();
-                        mockPlayer.start();
+                        mockPlayer.start(status.isEnableHeaderMatching(), status.isEnableBodyMatching());
                         registerCommands(mockPlayer.proxy);
                     } catch (IOException e) {
                         throw new RuntimeException("Aïe", e);
@@ -155,7 +150,7 @@ public class ProxyMockServer {
                 } else {
                     try {
                         mockPlayer.stop();
-                        mockPlayer.start();
+                        mockPlayer.start(status.isEnableHeaderMatching(), status.isEnableBodyMatching());
                         registerCommands(mockPlayer.proxy);
                     } catch (IOException e) {
                         throw new RuntimeException("Aïe", e);
@@ -168,13 +163,30 @@ public class ProxyMockServer {
                 StatusDTO statusDTO = getStatusDTO();
                 return sendJson(statusDTO);
 
+            } else if (httpRequest.getPath().getValue().endsWith("/expectations/edit")) {
+                String id = httpRequest.getFirstQueryStringParameter("id");
+                Expectation expectation = ExpectationUtil.getExpectation(mockPlayer.proxy, id);
+
+                ExpectationSerializer expectationSerializer = new ExpectationSerializer();
+                EditedMockDTO editedMockDTO = new EditedMockDTO(
+                        Paths.get(
+                                status.getExpectationsDirectory(),
+                                expectation.getHttpResponse().getFirstHeader("x-pms-filename")).toString(),
+                        expectationSerializer.serialize(expectation)
+                );
+                return sendJson(editedMockDTO);
+
             } else if (httpRequest.getPath().getValue().startsWith("/proxy-mock-server")) {
                 String wwwPath = httpRequest.getPath().getValue().replaceAll("/proxy-mock-server/(.*)$", "www/$1");
-                return HttpResponse.response()
-                        .withStatusCode(HttpStatusCode.OK_200.code())
-                        .withBody(
-                                FileUtil.readFileFromClasspath(wwwPath)
-                        );
+                try {
+                    String fileContent = FileUtil.readFileFromClasspath(wwwPath);
+                    return HttpResponse.response()
+                            .withStatusCode(HttpStatusCode.OK_200.code())
+                            .withBody(fileContent);
+                } catch (FileNotFoundException e) {
+                    return HttpResponse.response()
+                            .withStatusCode(HttpStatusCode.NOT_FOUND_404.code());
+                }
 
             } else {
                 return HttpResponse
@@ -208,20 +220,23 @@ public class ProxyMockServer {
             StatusDTO statusDTO = new StatusDTO();
             statusDTO.setMode(status.getCurrentMode());
             statusDTO.setExpectationsDirectory(status.getExpectationsDirectory());
+            statusDTO.setEnableHeaderMatching(status.isEnableHeaderMatching());
+            statusDTO.setEnableBodyMatching(status.isEnableBodyMatching());
 
 
             List<ExpectationDTO> activeExpectationsDTO = new ArrayList<>();
-            List<Expectation> activeExpectations = ExpectationUtil.getActivesExpectations(mockPlayer.proxy);
+            List<Expectation> activeExpectations = ExpectationUtil.getActivesExpectations(mockPlayer.proxy, null);
             int i = 0;
             for (Expectation expectation:activeExpectations) {
                 ExpectationDTO expectationDTO = new ExpectationDTO();
                 expectationDTO.setIndex(i);
+                expectationDTO.setId(expectation.getHttpResponse().getFirstHeader("x-pms-id"));
                 expectationDTO.setHost(expectation.getHttpRequest().getFirstHeader("host"));
                 expectationDTO.setPath(expectation.getHttpRequest().getPath().getValue());
                 expectationDTO.setFilename(
                         Paths.get(
                                 status.getExpectationsDirectory(),
-                                expectation.getHttpResponse().getFirstHeader("x-mock-filename")).toString()
+                                expectation.getHttpResponse().getFirstHeader("x-pms-filename")).toString()
                 );
                 expectationDTO.setProtocol(expectation.getHttpRequest().isSecure() != null && expectation.getHttpRequest().isSecure() ? "HTTPS" : "HTTP");
 
@@ -246,11 +261,11 @@ public class ProxyMockServer {
                 expectationDTO.setIndex(i);
                 expectationDTO.setHost(expectation.getHttpRequest().getFirstHeader("host"));
                 expectationDTO.setPath(expectation.getHttpRequest().getPath().getValue());
-                if (expectation.getHttpResponse().getFirstHeader("x-mock-filename") != null) {
+                if (expectation.getHttpResponse().getFirstHeader("x-pms-filename") != null) {
                     expectationDTO.setFilename(
                             Paths.get(
                                     status.getExpectationsDirectory(),
-                                    expectation.getHttpResponse().getFirstHeader("x-mock-filename")).toString()
+                                    expectation.getHttpResponse().getFirstHeader("x-pms-filename")).toString()
                     );
                 }
                 expectationDTO.setProtocol(expectation.getHttpRequest().isSecure() != null && expectation.getHttpRequest().isSecure() ? "HTTPS" : "HTTP");

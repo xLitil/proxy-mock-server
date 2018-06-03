@@ -9,11 +9,29 @@
     <link href='https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons' rel="stylesheet">
     <link href="css/vuetify.min.css" rel="stylesheet" type="text/css"></link>
 
+    <style>
+        .center {
+            margin: auto;
+            width: 470px;
+            background-color: #1976d2;
+            margin-top: 50vh;
+            transform: translateY(-50%);
+            color: white;
+            height: 200px;
+            line-height: 200px;
+            text-align: center;
+        }
+    </style>
+
+
     <title>proxy-mock-server</title>
 </head>
 <body>
+    <div id="welcomeBanner" class="center">
+        <h3 class="display-3">Proxy-mock-server</h3>
+    </div>
 
-    <div id="app">
+    <div id="app" style="display: none">
         <v-app>
             <v-snackbar
                     :timeout="3000"
@@ -26,29 +44,24 @@
                 <v-toolbar-title>
                     proxy-mock-server
                     <span v-if="status.mode === 'PLAY'"> - Currently playing mocks</span>
-                    <v-btn v-if="status.mode === 'PLAY'" id="copyExpectations" color="primary" v-on:click="startRecording">
-                        Record
-                    </v-btn>
-                    <v-btn v-if="status.mode === 'PLAY'" id="copyExpectations" color="primary" v-on:click="stopRecording">
-                        Reload mocks
-                    </v-btn>
-
-                    <span v-if="status.mode === 'RECORD'"> - Currently recording</span>
-                    <v-btn v-if="status.mode === 'RECORD'" id="copyExpectations" color="primary" v-on:click="stopRecording">
-                        Stop recording
-                    </v-btn>
                 </v-toolbar-title>
+                <v-btn v-if="status.mode === 'PLAY'" id="copyExpectations" color="primary" @click="startRecording">
+                    Record
+                </v-btn>
+                <v-btn v-if="status.mode === 'PLAY'" id="copyExpectations" color="primary" @click="stopRecording">
+                    Reload mocks
+                </v-btn>
+
+                <span v-if="status.mode === 'RECORD'"> - Currently recording</span>
+                <v-btn v-if="status.mode === 'RECORD'" id="copyExpectations" color="primary" @click="stopRecording">
+                    Stop recording
+                </v-btn>
+                <v-spacer></v-spacer>
+                <v-btn flat icon color="gray" @click="displaySettings">
+                    <v-icon>settings</v-icon>
+                </v-btn>
             </v-toolbar>
             <v-content>
-                <v-container fluid>
-                    <span class=".body-2">Mocks stored in : {{ status.expectationsDirectory}}</span>
-                    <v-btn id="copyExpectations" flat icon color="gray" :data-clipboard-text="status.expectationsDirectory">
-                        <v-icon>file_copy</v-icon>
-                    </v-btn>
-                    <v-btn flat icon color="gray" v-on:click="refreshStatus">
-                        <v-icon>refresh</v-icon>
-                    </v-btn>
-                </v-container>
                 <v-card>
                     <v-card-title>
                         # Active mocks : {{ Object.keys(status.activeExpectations).length }}
@@ -75,8 +88,8 @@
                             <td class="text-xs-left">{{ props.item.path }}</td>
                             <td class="text-xs-left">{{ props.item.detail }}</td>
                             <td class="text-xs-left">
-                                <v-btn class="copyFileName" flat icon color="gray" :data-clipboard-text="props.item.filename">
-                                    <v-icon>file_copy</v-icon>
+                                <v-btn flat icon color="gray" @click="edit(props.item.id)">
+                                    <v-icon>edit</v-icon>
                                 </v-btn>
                             </td>
                         </template>
@@ -118,6 +131,129 @@
                 </v-card>
 
 
+                <v-dialog
+                        v-model="showEditorDialog"
+                        fullscreen
+                        hide-overlay
+                        transition="dialog-bottom-transition"
+                        scrollable
+                >
+                    <v-card tile>
+                        <v-toolbar card dark color="primary">
+                            <v-toolbar-title>
+                                Edit mocks
+                            </v-toolbar-title>
+                            <v-spacer></v-spacer>
+                            <v-btn icon dark @click="hideEditor">
+                                <v-icon>close</v-icon>
+                            </v-btn>
+                        </v-toolbar>
+                        <v-card-text>
+                            <v-container fluid>
+                                <strong>Mock stored in: </strong> {{ editor.mockFilename }}
+                                <v-btn class="copyFileName" flat icon color="gray" :data-clipboard-text="editor.mockFilename">
+                                    <v-icon>file_copy</v-icon>
+                                </v-btn>
+                            </v-container>
+
+                            <v-text-field
+                                    name="input-7-1"
+                                    label="Mock"
+                                    :value="editor.mock"
+                                    full-width
+                                    multi-line
+                                    single-line
+                                    rows="17"
+                            ></v-text-field>
+                        </v-card-text>
+                    </v-card>
+
+                <v-dialog
+                        v-model="showSettingsDialog"
+                        fullscreen
+                        hide-overlay
+                        transition="dialog-bottom-transition"
+                        scrollable
+                >
+                    <v-card tile>
+                        <v-toolbar card dark color="primary">
+                            <v-toolbar-title>
+                                Settings
+                            </v-toolbar-title>
+                            <v-spacer></v-spacer>
+                            <v-btn icon dark @click="hideSettings">
+                                <v-icon>close</v-icon>
+                            </v-btn>
+                        </v-toolbar>
+                        <v-card-text>
+                            <v-container fluid>
+                                <strong>Mocks stored in: </strong> {{ status.expectationsDirectory}}
+                                <v-btn id="copyExpectations" flat icon color="gray" :data-clipboard-text="status.expectationsDirectory">
+                                    <v-icon>file_copy</v-icon>
+                                </v-btn>
+                            </v-container>
+                            <v-container fluid>
+                                <v-switch
+                                        label="Enable header matching"
+                                        v-model="status.enableHeaderMatching"
+                                ></v-switch>
+                                <p>
+                                    if <strong>enable</strong>, to match a mock, request must have all headers set
+                                    in the mock. Request may have more headers.
+                                </p>
+                                <v-switch
+                                        label="Enable body matching"
+                                        v-model="status.enableBodyMatching"
+                                ></v-switch>
+                                <p>
+                                    if <strong>enable</strong>, request body must match mock body, see following examples.
+                                </p>
+                                <p>
+                                    Example of substring matching :
+                                </p>
+                                <code>
+{
+"httpRequest" : {
+    ...
+    "body" : {
+        "type" : "STRING",
+        "string" : "restituerListeComptes",
+        "subString": true
+    }
+}
+                                </code>
+                                <p>
+                                    Example of regex matching :
+                                </p>
+                                <code>
+{
+"httpRequest" : {
+    ...
+    "body" : {
+        "type" : "REGEX",
+        "regex" : ".*restituerListeComptes.*"
+    }
+}
+                                </code>
+                                <p>
+                                    Example of exact matching :
+                                </p>
+                                <code>
+{
+"httpRequest" : {
+    ...
+    "body" : {
+        "type" : "STRING",
+        "string" : "restituerListeComptes",
+        "contentType" : "text/plain; charset=utf-8"
+    }
+}
+                                </code>
+                            </v-container>
+                        </v-card-text>
+                    </v-card>
+                </v-dialog>
+
             </v-content>
             <v-footer app></v-footer>
         </v-app>
@@ -126,140 +262,8 @@
 
     <script src="js/vue.js"></script>
     <script src="js/vuetify.js"></script>
-
-    <script>
-    var data = {
-        status: {
-            mode: null,
-            activeExpectations: [],
-            recordedExpectations: []
-        },
-        search: '',
-        headers: [
-            { text: '#', value: 'index' },
-            { text: 'protocol', value: 'protocol' },
-            { text: 'host', value: 'host' },
-            { text: 'path', value: 'path' },
-            { text: 'detail', value: 'detail' },
-            { text: 'filename', value: 'filename' }
-        ],
-        snackbar: {
-            show: false,
-            text: ''
-        }
-    };
-
-    Vue.component('page', {
-      template: '#page'
-    });
-    new Vue({
-        el: '#app',
-        data: data,
-        created: function () {
-            fetch('status')
-                .then(function(response) {
-                    return response.json().then(function(json) {
-                        data.status = json;
-                    });
-                })
-                .catch(function(error) {
-                    data.snackbar.text = "An error occured, see logs for more information";
-                    data.snackbar.show = true;
-                    data.status = json;
-                });
-        },
-        methods: {
-            startRecording: function(event) {
-                fetch('record')
-                    .then(function(response) {
-                        return response.json().then(function(json) {
-                            data.snackbar.text = "Recording";
-                            data.snackbar.show = true;
-                            data.status = json;
-                        });
-                    })
-                    .catch(function(error) {
-                        data.snackbar.text = "An error occured, see logs for more information";
-                        data.snackbar.show = true;
-                        data.status = json;
-                    });
-            },
-            stopRecording: function(event) {
-                fetch('play')
-                    .then(function(response) {
-                        return response.json().then(function(json) {
-                            data.snackbar.text = "Play / replay";
-                            data.snackbar.show = true;
-                            data.status = json;
-                        })
-                    })
-                    .catch(function(error) {
-                        data.snackbar.text = "An error occured, see logs for more information";
-                        data.snackbar.show = true;
-                        data.status = json;
-                    });
-            },
-            refreshStatus: function(event) {
-                fetch('status')
-                    .then(function(response) {
-                        return response.json().then(function(json) {
-                            data.snackbar.text = "Status refreshed";
-                            data.snackbar.show = true;
-                            data.status = json;
-                        })
-                    })
-                    .catch(function(error) {
-                        data.snackbar.text = "An error occured, see logs for more information";
-                        data.snackbar.show = true;
-                        data.status = json;
-                    });
-            }
-        }
-    })
-
-    </script>
-
     <script src="js/clipboard.js"></script>
-
-    <script>
-        var clipboard = new ClipboardJS('#copyExpectations');
-
-        clipboard.on('success', function(e) {
-            data.snackbar.text = "Copied to clipboard";
-            data.snackbar.show = true;
-            console.info('Action:', e.action);
-            console.info('Text:', e.text);
-            console.info('Trigger:', e.trigger);
-
-            e.clearSelection();
-        });
-
-        clipboard.on('error', function(e) {
-            data.snackbar.text = "Unable to copied to clipboard";
-            data.snackbar.show = true;
-            console.error('Action:', e.action);
-            console.error('Trigger:', e.trigger);
-        });
-
-        var clipboardFilename = new ClipboardJS('.copyFileName');
-        clipboardFilename.on('success', function(e) {
-            data.snackbar.text = "Filename copied to clipboard";
-            data.snackbar.show = true;
-            console.info('Action:', e.action);
-            console.info('Text:', e.text);
-            console.info('Trigger:', e.trigger);
-
-            e.clearSelection();
-        });
-
-        clipboardFilename.on('error', function(e) {
-            data.snackbar.text = "Unable to copied filename to clipboard";
-            data.snackbar.show = true;
-            console.error('Action:', e.action);
-            console.error('Trigger:', e.trigger);
-        });
-
-    </script>
+    <script src="js/app.js"></script>
 
 </body>
 </html>

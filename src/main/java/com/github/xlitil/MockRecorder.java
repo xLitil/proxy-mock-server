@@ -46,7 +46,7 @@ public class MockRecorder {
             NottableString rqtPath = expectation.getHttpRequest().getPath();
 
             String filename = FileUtil.escapeFileName(expectationOrder + "_" + FileUtil.escapeFileName(rqtHost) + "_" + rqtPath.getValue()) + ".expectation.current.json";
-            expectation.getHttpResponse().replaceHeader("x-mock-filename", filename);
+            expectation.getHttpResponse().replaceHeader("x-pms-filename", filename);
 
             Path filenamePath = Paths.get(
                     expectationsDirectory,

@@ -3,6 +3,7 @@ package com.github.xlitil.model;
 public class ExpectationDTO {
 
     private int index;
+    private String id;
     private String host;
     private String path;
     private String protocol;
@@ -15,6 +16,14 @@ public class ExpectationDTO {
 
     public void setIndex(int index) {
         this.index = index;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getHost() {
