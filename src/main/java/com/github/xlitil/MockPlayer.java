@@ -14,6 +14,8 @@ public class MockPlayer {
 
     ClientAndProxy proxy;
 
+    private static ExpectationDetail[] expectationDetails = new ExpectationDetail[] {new ExpectationDetailSoap()};
+
     public MockPlayer(int port, String expectationsDirectory) {
         this.port = port;
         this.expectationsDirectory = expectationsDirectory;
@@ -54,7 +56,16 @@ public class MockPlayer {
                 request.withBody(loadedExpectation.getHttpRequest().getBody());
             }
 
-            loadedExpectation.getHttpResponse().withHeader("x-pms-id", "" + UUID.randomUUID());
+            loadedExpectation.getHttpResponse().replaceHeader("x-pms-id", "" + UUID.randomUUID());
+
+            for (ExpectationDetail expectationDetail:expectationDetails) {
+                String detail = expectationDetail.getDetail(loadedExpectation);
+                if (detail != null) {
+                    loadedExpectation.getHttpResponse().replaceHeader("x-pms-detail", detail);
+                    break;
+                }
+            }
+
             proxy
                     .when(request, loadedExpectation.getTimes(), loadedExpectation.getTimeToLive())
                     .respond(loadedExpectation.getHttpResponse());

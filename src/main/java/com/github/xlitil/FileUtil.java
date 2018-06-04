@@ -42,7 +42,7 @@ public class FileUtil {
         // Create whole path automatically when writing to a new file
         file.getParentFile().mkdirs();
 
-        Files.write(file.toPath(), content.getBytes(DEFAULT_ENCODING), StandardOpenOption.CREATE);
+        Files.write(file.toPath(), content.getBytes(DEFAULT_ENCODING), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
     }
 
     public static String escapeFileName(String name) {

@@ -33,8 +33,6 @@ public class ProxyMockServer {
 
     private static ProxyMockServerStatus status;
 
-    private static ExpectationDetail[] expectationDetails = new ExpectationDetail[] {new ExpectationDetailSoap()};
-
     public static void main(String[] args) throws Exception {
         ConfigurationProperties.maxExpectations(1000);
 
@@ -158,26 +156,52 @@ public class ProxyMockServer {
                 return sendJson(statusDTO);
 
             } else if (httpRequest.getPath().getValue().endsWith("/updateStatus")) {
-                status.setEnableHeaderMatching(Boolean.valueOf(httpRequest.getFirstQueryStringParameter("enableHeaderMatching")));
-                status.setEnableBodyMatching(Boolean.valueOf(httpRequest.getFirstQueryStringParameter("enableBodyMatching")));
+                Boolean enableHeaderMatching = Boolean.valueOf(httpRequest.getFirstQueryStringParameter("enableHeaderMatching"));
+                Boolean enableBodyMatching = Boolean.valueOf(httpRequest.getFirstQueryStringParameter("enableBodyMatching"));
+                if (enableHeaderMatching != status.isEnableHeaderMatching()
+                        || enableBodyMatching != status.isEnableBodyMatching()) {
+                    status.setEnableHeaderMatching(enableHeaderMatching);
+                    status.setEnableBodyMatching(enableBodyMatching);
 
-                restartMockPlayer();
+                    restartMockPlayer();
+                }
 
                 StatusDTO statusDTO = getStatusDTO();
                 return sendJson(statusDTO);
 
             } else if (httpRequest.getPath().getValue().endsWith("/expectations/edit")) {
-                String id = httpRequest.getFirstQueryStringParameter("id");
-                Expectation expectation = ExpectationUtil.getExpectation(mockPlayer.proxy, id);
+                String filename = httpRequest.getFirstQueryStringParameter("filename");
+                try {
+                    String mock = FileUtil.readFile(Paths.get(filename).toFile());
+                    EditedMockDTO editedMockDTO = new EditedMockDTO(
+                            filename,
+                            mock
+                    );
+                    return sendJson(editedMockDTO);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return HttpResponse.response()
+                            .withStatusCode(HttpStatusCode.INTERNAL_SERVER_ERROR_500.code());
+                }
 
-                ExpectationSerializer expectationSerializer = new ExpectationSerializer();
-                EditedMockDTO editedMockDTO = new EditedMockDTO(
-                        Paths.get(
-                                status.getExpectationsDirectory(),
-                                expectation.getHttpResponse().getFirstHeader("x-pms-filename")).toString(),
-                        expectationSerializer.serialize(expectation)
-                );
-                return sendJson(editedMockDTO);
+
+            } else if (httpRequest.getPath().getValue().endsWith("/expectations/update")) {
+                String id = httpRequest.getFirstQueryStringParameter("id");
+                String filename = httpRequest.getFirstQueryStringParameter("filename");
+                try {
+                    FileUtil.saveFile(
+                            Paths.get(filename).toFile(),
+                            httpRequest.getBodyAsString());
+
+                    restartMockPlayer();
+                    StatusDTO statusDTO = getStatusDTO();
+                    return sendJson(statusDTO);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return HttpResponse.response()
+                            .withStatusCode(HttpStatusCode.INTERNAL_SERVER_ERROR_500.code());
+                }
+
 
             } else if (httpRequest.getPath().getValue().startsWith("/proxy-mock-server")) {
                 String wwwPath = httpRequest.getPath().getValue().replaceAll("/proxy-mock-server/(.*)$", "www/$1");
@@ -252,14 +276,7 @@ public class ProxyMockServer {
                                 expectation.getHttpResponse().getFirstHeader("x-pms-filename")).toString()
                 );
                 expectationDTO.setProtocol(expectation.getHttpRequest().isSecure() != null && expectation.getHttpRequest().isSecure() ? "HTTPS" : "HTTP");
-
-                for (ExpectationDetail expectationDetail:expectationDetails) {
-                    String detail = expectationDetail.getDetail(expectation);
-                    if (detail != null) {
-                        expectationDTO.setDetail(detail);
-                        break;
-                    }
-                }
+                expectationDTO.setDetail(expectation.getHttpResponse().getFirstHeader("x-pms-detail"));
 
                 activeExpectationsDTO.add(expectationDTO);
                 i++;
