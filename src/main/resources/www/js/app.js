@@ -1,5 +1,5 @@
 var data = {
-    defaultTimout: 5000,
+    defaultTimout: 10000,
 
     showSettingsDialog: false,
 
@@ -138,7 +138,21 @@ new Vue({
 
         },
         hideSettings: function(event) {
-            data.showSettingsDialog = false;
+             var self = this;
+             timeout(data.defaultTimout, fetch('updateStatus?enableHeaderMatching=' + data.status.enableHeaderMatching + "&enableBodyMatching=" + data.status.enableBodyMatching))
+                 .then(function(response) {
+                     return response.json().then(function(json) {
+                         data.status = json;
+                         data.showSettingsDialog = false;
+                     })
+                 })
+                 .catch(function(error) {
+                     console.error(error);
+                     data.showSettingsDialog = false;
+                     data.snackbar.text = "An error occured, see logs for more information";
+                     data.snackbar.show = true;
+                 });
+
         },
         displayEditor: function(id, text, filename) {
             data.editor.mock = text;

@@ -32,6 +32,7 @@ public class ExpectationUtil {
 
             Expectation expectation = expectationSerializer.deserialize(json);
             expectation.getHttpResponse().replaceHeader("x-pms-filename", file.getName());
+            expectation.getHttpResponse().replaceHeader("x-pms-request-host", expectation.getHttpRequest().getFirstHeader("host"));
 
             loadedExpectations.add(expectation);
         }

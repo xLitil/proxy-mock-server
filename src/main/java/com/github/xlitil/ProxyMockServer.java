@@ -148,18 +148,21 @@ public class ProxyMockServer {
                         throw new RuntimeException("Aïe", e);
                     }
                 } else {
-                    try {
-                        mockPlayer.stop();
-                        mockPlayer.start(status.isEnableHeaderMatching(), status.isEnableBodyMatching());
-                        registerCommands(mockPlayer.proxy);
-                    } catch (IOException e) {
-                        throw new RuntimeException("Aïe", e);
-                    }
+                    restartMockPlayer();
                 }
                 StatusDTO statusDTO = getStatusDTO();
                 return sendJson(statusDTO);
 
             } else if (httpRequest.getPath().getValue().endsWith("/status")) {
+                StatusDTO statusDTO = getStatusDTO();
+                return sendJson(statusDTO);
+
+            } else if (httpRequest.getPath().getValue().endsWith("/updateStatus")) {
+                status.setEnableHeaderMatching(Boolean.valueOf(httpRequest.getFirstQueryStringParameter("enableHeaderMatching")));
+                status.setEnableBodyMatching(Boolean.valueOf(httpRequest.getFirstQueryStringParameter("enableBodyMatching")));
+
+                restartMockPlayer();
+
                 StatusDTO statusDTO = getStatusDTO();
                 return sendJson(statusDTO);
 
@@ -192,6 +195,16 @@ public class ProxyMockServer {
                 return HttpResponse
                         .notFoundResponse()
                         .withBody("Command not found");
+            }
+        }
+
+        private void restartMockPlayer() {
+            try {
+                mockPlayer.stop();
+                mockPlayer.start(status.isEnableHeaderMatching(), status.isEnableBodyMatching());
+                registerCommands(mockPlayer.proxy);
+            } catch (IOException e) {
+                throw new RuntimeException("Aïe", e);
             }
         }
 
@@ -231,7 +244,7 @@ public class ProxyMockServer {
                 ExpectationDTO expectationDTO = new ExpectationDTO();
                 expectationDTO.setIndex(i);
                 expectationDTO.setId(expectation.getHttpResponse().getFirstHeader("x-pms-id"));
-                expectationDTO.setHost(expectation.getHttpRequest().getFirstHeader("host"));
+                expectationDTO.setHost(expectation.getHttpResponse().getFirstHeader("x-pms-request-host"));
                 expectationDTO.setPath(expectation.getHttpRequest().getPath().getValue());
                 expectationDTO.setFilename(
                         Paths.get(
