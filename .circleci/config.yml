@@ -3,7 +3,7 @@ jobs: # a collection of steps
   build: # runs not using Workflows must have a `build` job as entry point
 
     docker:
-      - image: maven:3.3.9-jdk-8
+      - image: 3.5.3-jdk-8
         environment:
           - cmd=/bin/bash
 
