@@ -6,6 +6,7 @@ jobs: # a collection of steps
       - image: maven:3.5.3-jdk-8
         environment:
           - cmd=/bin/bash
+          - MAVEN_OPTS: "-Xms256m -Xmx1024m"
 
     steps: # a collection of executable commands
 
