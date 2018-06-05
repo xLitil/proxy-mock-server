@@ -7,11 +7,10 @@ import com.github.xlitil.model.ExpectationDTO;
 import com.github.xlitil.model.Mode;
 import com.github.xlitil.model.StatusDTO;
 import org.apache.commons.cli.*;
-import org.mockserver.client.AbstractClient;
-import org.mockserver.client.serialization.ExpectationSerializer;
 import org.mockserver.configuration.ConfigurationProperties;
+import org.mockserver.integration.ClientAndServer;
 import org.mockserver.mock.Expectation;
-import org.mockserver.mock.action.ExpectationCallback;
+import org.mockserver.mock.action.ExpectationResponseCallback;
 import org.mockserver.model.HttpClassCallback;
 import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
@@ -28,7 +27,6 @@ public class ProxyMockServer {
 
     private static int port;
 
-    private static MockRecorder mockRecorder;
     private static MockPlayer mockPlayer;
 
     private static ProxyMockServerStatus status;
@@ -92,7 +90,7 @@ public class ProxyMockServer {
     }
 
 
-    public static void registerCommands(AbstractClient abstractClient) {
+    public static void registerCommands(ClientAndServer abstractClient) {
         HttpClassCallback httpClassCallback = HttpClassCallback.callback()
                 .withCallbackClass(CommandCallback.class.getName());
         abstractClient
@@ -100,7 +98,7 @@ public class ProxyMockServer {
                         HttpRequest.request()
                                 .withPath("/proxy-mock-server/.*")
                 )
-                .callback(httpClassCallback);
+                .respond(httpClassCallback);
         abstractClient
                 .when(
                         HttpRequest.request()
@@ -116,7 +114,7 @@ public class ProxyMockServer {
     }
 
 
-    public static class CommandCallback implements ExpectationCallback {
+    public static class CommandCallback implements ExpectationResponseCallback {
 
         @Override
         public HttpResponse handle(HttpRequest httpRequest) {
@@ -124,13 +122,8 @@ public class ProxyMockServer {
                 if (status.getCurrentMode() != Mode.RECORD) {
                     status.setCurrentMode(Mode.RECORD);
 
-                    mockPlayer.stop();
-                    if (mockRecorder == null) {
-                        mockRecorder = new MockRecorder(port, status.getExpectationsDirectory());
-
-                    }
-                    mockRecorder.start();
-                    registerCommands(mockRecorder.proxy);
+                    mockPlayer.proxy.clear(null);
+                    registerCommands(mockPlayer.proxy);
                 }
                 StatusDTO statusDTO = getStatusDTO();
                 return sendJson(statusDTO);
@@ -139,8 +132,9 @@ public class ProxyMockServer {
                 if (status.getCurrentMode() != Mode.PLAY) {
                     status.setCurrentMode(Mode.PLAY);
                     try {
-                        mockRecorder.stop();
-                        mockPlayer.start(status.isEnableHeaderMatching(), status.isEnableBodyMatching());
+                        ExpectationUtil.saveExpectation(mockPlayer.proxy, status.getExpectationsDirectory());
+                        mockPlayer.proxy.clear(null);
+                        mockPlayer.loadExpectations(status.isEnableHeaderMatching(), status.isEnableBodyMatching());
                         registerCommands(mockPlayer.proxy);
                     } catch (IOException e) {
                         throw new RuntimeException("Aïe", e);
@@ -224,8 +218,8 @@ public class ProxyMockServer {
 
         private void restartMockPlayer() {
             try {
-                mockPlayer.stop();
-                mockPlayer.start(status.isEnableHeaderMatching(), status.isEnableBodyMatching());
+                mockPlayer.proxy.clear(null);
+                mockPlayer.loadExpectations(status.isEnableHeaderMatching(), status.isEnableBodyMatching());
                 registerCommands(mockPlayer.proxy);
             } catch (IOException e) {
                 throw new RuntimeException("Aïe", e);

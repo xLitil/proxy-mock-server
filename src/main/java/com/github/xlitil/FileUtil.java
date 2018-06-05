@@ -1,8 +1,5 @@
 package com.github.xlitil;
 
-import org.apache.commons.io.FileUtils;
-import org.mockserver.client.serialization.ExpectationSerializer;
-
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.Files;

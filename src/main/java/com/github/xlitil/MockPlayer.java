@@ -1,6 +1,7 @@
 package com.github.xlitil;
 
-import org.mockserver.integration.ClientAndProxy;
+
+import org.mockserver.integration.ClientAndServer;
 import org.mockserver.mock.Expectation;
 import org.mockserver.model.HttpRequest;
 
@@ -12,7 +13,7 @@ public class MockPlayer {
     private final int port;
     private final String expectationsDirectory;
 
-    ClientAndProxy proxy;
+    ClientAndServer proxy;
 
     private static ExpectationDetail[] expectationDetails = new ExpectationDetail[] {new ExpectationDetailSoap()};
 
@@ -22,8 +23,13 @@ public class MockPlayer {
     }
 
     public void start(boolean enableHeaderMatching, boolean enableBodyMatching) throws IOException {
-        proxy = ClientAndProxy.startClientAndProxy(port);
+        proxy = ClientAndServer.startClientAndServer(port);
 
+        loadExpectations(enableHeaderMatching, enableBodyMatching);
+
+    }
+
+    public void loadExpectations(boolean enableHeaderMatching, boolean enableBodyMatching) throws IOException {
         List<Expectation> loadedExpectations = ExpectationUtil.loadExpectations(expectationsDirectory);
         for(Expectation loadedExpectation:loadedExpectations) {
 
@@ -70,7 +76,6 @@ public class MockPlayer {
                     .when(request, loadedExpectation.getTimes(), loadedExpectation.getTimeToLive())
                     .respond(loadedExpectation.getHttpResponse());
         }
-
     }
 
     public void stop() {
