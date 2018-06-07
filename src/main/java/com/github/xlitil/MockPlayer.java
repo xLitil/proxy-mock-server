@@ -11,25 +11,23 @@ import java.util.UUID;
 
 public class MockPlayer {
     private final int port;
-    private final String expectationsDirectory;
 
     ClientAndServer proxy;
 
     private static ExpectationDetail[] expectationDetails = new ExpectationDetail[] {new ExpectationDetailSoap()};
 
-    public MockPlayer(int port, String expectationsDirectory) {
+    public MockPlayer(int port) {
         this.port = port;
-        this.expectationsDirectory = expectationsDirectory;
     }
 
-    public void start(boolean enableHeaderMatching, boolean enableBodyMatching) throws IOException {
+    public void start(String expectationsDirectory, boolean enableHeaderMatching, boolean enableBodyMatching) throws IOException {
         proxy = ClientAndServer.startClientAndServer(port);
 
-        loadExpectations(enableHeaderMatching, enableBodyMatching);
+        loadExpectations(expectationsDirectory, enableHeaderMatching, enableBodyMatching);
 
     }
 
-    public void loadExpectations(boolean enableHeaderMatching, boolean enableBodyMatching) throws IOException {
+    public void loadExpectations(String expectationsDirectory , boolean enableHeaderMatching, boolean enableBodyMatching) throws IOException {
         List<Expectation> loadedExpectations = ExpectationUtil.loadExpectations(expectationsDirectory);
         for(Expectation loadedExpectation:loadedExpectations) {
 

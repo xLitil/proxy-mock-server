@@ -2,19 +2,46 @@ package com.github.xlitil;
 
 import com.github.xlitil.model.Mode;
 
+import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.Set;
+
 public class ProxyMockServerStatus {
 
-    private String expectationsDirectory;
+    private String rootExpectations;
+    private String currentMockSet;
+    private Set<String> mocksSet = new HashSet<>();
+
     private Mode currentMode;
     private boolean enableBodyMatching = false;
     private boolean enableHeaderMatching = false;
 
     public String getExpectationsDirectory() {
-        return expectationsDirectory;
+        return Paths.get(rootExpectations, currentMockSet).toString();
     }
 
-    public void setExpectationsDirectory(String expectationsDirectory) {
-        this.expectationsDirectory = expectationsDirectory;
+    public String getRootExpectations() {
+        return rootExpectations;
+    }
+
+    public void setRootExpectations(String rootExpectations) {
+        this.rootExpectations = rootExpectations;
+    }
+
+    public String getCurrentMockSet() {
+        return currentMockSet;
+    }
+
+    public void setCurrentMockSet(String currentMockSet) {
+        this.currentMockSet = currentMockSet;
+    }
+
+    public Set<String> getMocksSet() {
+        return mocksSet;
+    }
+
+    public void setMocksSet(Set<String> mocksSet) {
+        this.mocksSet = mocksSet;
     }
 
     public Mode getCurrentMode() {

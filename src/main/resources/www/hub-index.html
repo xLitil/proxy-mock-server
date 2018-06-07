@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <link href='https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Material+Icons' rel="stylesheet">
+    <link href="css/vuetify.min.css" rel="stylesheet" type="text/css"></link>
+
+    <style>
+        .welcomeBanner {
+            margin: auto;
+            width: 470px;
+            background-color: #1976d2;
+            margin-top: 50vh;
+            transform: translateY(-50%);
+            color: white;
+            height: 200px;
+            line-height: 200px;
+            text-align: center;
+            font-size: 56px;
+            font-weight: 400;
+            letter-spacing: -.02em;
+        }
+
+    </style>
+
+
+    <title>Mocks Hub</title>
+</head>
+<body>
+<div id="welcomeBanner" class="welcomeBanner">
+    Proxy-mock-server
+</div>
+
+<div id="app" style="display: none">
+    <v-app>
+        <v-snackbar
+                :timeout="3000"
+                :top="true"
+                v-model="snackbar.show">
+            {{ snackbar.text }}
+            <v-btn flat color="pink" @click.native="snackbar.show = false">Close</v-btn>
+        </v-snackbar>
+        <v-toolbar app>
+            <v-toolbar-title>
+                Mocks Hub
+            </v-toolbar-title>
+        </v-toolbar>
+        <v-content>
+
+        </v-content>
+    </v-app>
+</div>
+
+
+<script src="js/vue.js"></script>
+<script src="js/vuetify.js"></script>
+<script src="js/hub-app.js"></script>
+
+</body>
+</html>

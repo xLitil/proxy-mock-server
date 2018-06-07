@@ -3,6 +3,11 @@ var data = {
 
     showSettingsDialog: false,
 
+    mockSetSelector : {
+        searchMockSet: null,
+        show: false
+    },
+
     showEditorDialog: false,
     editor: {
         id: null,
@@ -15,6 +20,8 @@ var data = {
         enableBodyMatching: null
     },
     status: {
+        mocksSet: [],
+        currentMockSet: null,
         mode: null,
         activeExpectations: [],
         recordedExpectations: [],
@@ -34,6 +41,7 @@ var data = {
         show: false,
         text: ''
     }
+
 };
 
 Vue.component('page', {
@@ -138,6 +146,30 @@ new Vue({
                     self.showSnackbar("An error occured, see logs for more information");
                 });
         },
+        updateCurrentMockSet: function(value) {
+            var self = this;
+            self.mockSetSelector.show = false;
+            this
+                .updateStatus(data.status.enableHeaderMatching, data.status.enableBodyMatching, value)
+                .then(function() {
+                    self.stopRecording();
+                });
+        },
+        updateStatus: function(enableHeaderMatching, enableBodyMatching, mockSet) {
+            var self = this;
+            return timeout(data.defaultTimout, fetch('updateStatus?enableHeaderMatching=' + enableHeaderMatching + "&enableBodyMatching=" + enableBodyMatching + "&mockSet=" + mockSet))
+                .then(function(response) {
+                    return response.json().then(function(json) {
+                        data.status = json;
+                        data.showSettingsDialog = false;
+                    })
+                })
+                .catch(function(error) {
+                    console.error(error);
+                    data.showSettingsDialog = false;
+                    self.showSnackbar("An error occured, see logs for more information");
+                });
+        },
 
         displaySettings: function(event) {
             data.showSettingsDialog = true;
@@ -153,18 +185,8 @@ new Vue({
                 return;
             }
 
-            timeout(data.defaultTimout, fetch('updateStatus?enableHeaderMatching=' + data.settings.enableHeaderMatching + "&enableBodyMatching=" + data.settings.enableBodyMatching))
-                 .then(function(response) {
-                     return response.json().then(function(json) {
-                         data.status = json;
-                         data.showSettingsDialog = false;
-                     })
-                 })
-                 .catch(function(error) {
-                     console.error(error);
-                     data.showSettingsDialog = false;
-                     self.showSnackbar("An error occured, see logs for more information");
-                 });
+            self.updateStatus(data.settings.enableHeaderMatching, data.settings.enableBodyMatching, data.status.currentMockSet)
+
         },
 
         displayEditor: function(id, text, filename) {
@@ -207,6 +229,14 @@ new Vue({
                     self.showSnackbar("An error occured, see logs for more information");
                 });
 
+        }
+    },
+    computed: {
+        filteredSearchMockSet: function() {
+            var self = this;
+            return self.status.mocksSet.filter(function(mockSet) {
+                return self.mockSetSelector.searchMockSet == null || mockSet.toLowerCase().indexOf(self.mockSetSelector.searchMockSet.toLowerCase()) > -1
+            });
         }
     }
 });

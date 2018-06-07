@@ -24,6 +24,10 @@
             font-weight: 400;
             letter-spacing: -.02em;
         }
+
+        .editorMock textarea {
+            height: 80vh
+        }
     </style>
 
 
@@ -49,6 +53,44 @@
                     <span v-if="status.mode === 'PLAY'"> - Currently playing mocks</span>
                     <span v-if="status.mode === 'RECORD'"> - Currently recording</span>
                 </v-toolbar-title>
+
+                <v-menu offset-y :close-on-content-click="false"  v-model="mockSetSelector.show">
+                    <v-btn slot="activator"
+                           color="primary" dark
+                           @click="mockSetSelector.searchMockSet = ''"
+                    >
+                                Mocks set : {{status.currentMockSet}}
+                    </v-btn>
+                    <v-card>
+                        <v-container>
+                            <v-text-field
+                                    v-model="mockSetSelector.searchMockSet"
+                                    label="Find or create mockSet"
+                            ></v-text-field>
+                            <v-list>
+                                <template v-for="(mockSet, index) in filteredSearchMockSet">
+                                    <v-list-tile avatar @click="updateCurrentMockSet(mockSet)">
+                                        <v-list-tile-avatar>
+                                            <v-icon v-if="mockSet == status.currentMockSet" small>check</v-icon>
+                                        </v-list-tile-avatar>
+                                        <v-list-tile-content>
+                                            <v-list-tile-title v-html="mockSet"></v-list-tile-title>
+                                        </v-list-tile-content>
+                                    </v-list-tile>
+                                </template>
+                                <v-list-tile v-if="filteredSearchMockSet.length == 0"avatar @click="updateCurrentMockSet(mockSetSelector.searchMockSet)">
+                                    <v-list-tile-avatar>
+                                        <v-icon small>add</v-icon>
+                                    </v-list-tile-avatar>
+                                    <v-list-tile-content>
+                                        <v-list-tile-title>Create mock set : {{mockSetSelector.searchMockSet}}</v-list-tile-title>
+                                    </v-list-tile-content>
+                                </v-list-tile>
+                            </v-list>
+                        </v-container>
+                    </v-card>
+                </v-menu>
+
                 <v-btn v-if="status.mode === 'PLAY'" id="copyExpectations" color="primary" @click="startRecording">
                     Record
                 </v-btn>
@@ -166,7 +208,7 @@
                                     full-width
                                     multi-line
                                     single-line
-                                    rows="17"
+                                    class="editorMock"
                             ></v-text-field>
                         </v-card-text>
                     </v-card>

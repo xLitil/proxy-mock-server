@@ -5,7 +5,10 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class FileUtil {
     public static final Charset DEFAULT_ENCODING = Charset.forName("UTF-8");
@@ -28,6 +31,24 @@ public class FileUtil {
                 search(file.getAbsolutePath(), regex, filesFound);
             }
         }
+    }
+
+    public static Set<File> findSubdirectories(String directoryName) {
+        Set<File> subDirectories = new HashSet<>();
+        File directory = new File(directoryName);
+
+        File[] fList = directory.listFiles();
+
+        if (fList == null) {
+            return subDirectories;
+        }
+
+        for (File file : fList) {
+            if (file.isDirectory()) {
+                subDirectories.add(file);
+            }
+        }
+        return subDirectories;
     }
 
     public static String readFile(File file) throws IOException {

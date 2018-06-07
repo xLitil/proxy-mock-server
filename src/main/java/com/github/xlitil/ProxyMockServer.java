@@ -16,14 +16,18 @@ import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
 import org.mockserver.model.HttpStatusCode;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ProxyMockServer {
     public static final String DEFAULT_EXPECTATIONS_DIRECTORY = Paths.get(System.getProperty("java.io.tmpdir") + "/mocks").toString();
+    public static final String DEFAULT_MOCK_SET = "default";
 
     private static int port;
 
@@ -32,7 +36,7 @@ public class ProxyMockServer {
     private static ProxyMockServerStatus status;
 
     public static void main(String[] args) throws Exception {
-        ConfigurationProperties.maxExpectations(1000);
+        ConfigurationProperties.maxExpectations(10000);
 
         Options options = getCommandLineOptions();
         CommandLineParser parser = new DefaultParser();
@@ -46,11 +50,18 @@ public class ProxyMockServer {
 
             status = new ProxyMockServerStatus();
 
-            status.setExpectationsDirectory(cmd.getOptionValue("expectationsPath", DEFAULT_EXPECTATIONS_DIRECTORY));
+            status.setRootExpectations(cmd.getOptionValue("expectationsPath", DEFAULT_EXPECTATIONS_DIRECTORY));
+            status.setCurrentMockSet(cmd.getOptionValue("mockSet", DEFAULT_MOCK_SET));
+            Set<File> subdirectories = FileUtil.findSubdirectories(status.getRootExpectations());
+            status.setMocksSet(subdirectories
+                    .stream()
+                    .map(f -> f.getName())
+                    .collect(Collectors.toSet()));
+            status.getMocksSet().add(status.getCurrentMockSet());
 
             status.setCurrentMode(Mode.PLAY);
-            mockPlayer = new MockPlayer(port, status.getExpectationsDirectory());
-            mockPlayer.start(status.isEnableHeaderMatching(), status.isEnableBodyMatching());
+            mockPlayer = new MockPlayer(port);
+            mockPlayer.start(status.getExpectationsDirectory(), status.isEnableHeaderMatching(), status.isEnableBodyMatching());
             registerCommands(mockPlayer.proxy);
 
         } catch (MissingOptionException e) {
@@ -84,6 +95,14 @@ public class ProxyMockServer {
                         .argName("expectationsPath")
                         .longOpt("expectationsPath")
                         .desc("Path used to store expectation, default : " + DEFAULT_EXPECTATIONS_DIRECTORY)
+                        .build()
+        );
+        options.addOption(
+                Option.builder("m")
+                        .hasArg()
+                        .argName("mockSet")
+                        .longOpt("mockSet")
+                        .desc("Mock set used (sub path of expectationsPath), default : " + DEFAULT_MOCK_SET)
                         .build()
         );
         return options;
@@ -134,7 +153,7 @@ public class ProxyMockServer {
                     try {
                         ExpectationUtil.saveExpectation(mockPlayer.proxy, status.getExpectationsDirectory());
                         mockPlayer.proxy.clear(null);
-                        mockPlayer.loadExpectations(status.isEnableHeaderMatching(), status.isEnableBodyMatching());
+                        mockPlayer.loadExpectations(status.getExpectationsDirectory(), status.isEnableHeaderMatching(), status.isEnableBodyMatching());
                         registerCommands(mockPlayer.proxy);
                     } catch (IOException e) {
                         throw new RuntimeException("Aïe", e);
@@ -152,10 +171,14 @@ public class ProxyMockServer {
             } else if (httpRequest.getPath().getValue().endsWith("/updateStatus")) {
                 Boolean enableHeaderMatching = Boolean.valueOf(httpRequest.getFirstQueryStringParameter("enableHeaderMatching"));
                 Boolean enableBodyMatching = Boolean.valueOf(httpRequest.getFirstQueryStringParameter("enableBodyMatching"));
+                String mockSet = httpRequest.getFirstQueryStringParameter("mockSet");
                 if (enableHeaderMatching != status.isEnableHeaderMatching()
-                        || enableBodyMatching != status.isEnableBodyMatching()) {
+                        || enableBodyMatching != status.isEnableBodyMatching()
+                        || !status.getCurrentMockSet().equals(mockSet)) {
                     status.setEnableHeaderMatching(enableHeaderMatching);
                     status.setEnableBodyMatching(enableBodyMatching);
+                    status.setCurrentMockSet(mockSet);
+                    status.getMocksSet().add(mockSet);
 
                     restartMockPlayer();
                 }
@@ -219,7 +242,7 @@ public class ProxyMockServer {
         private void restartMockPlayer() {
             try {
                 mockPlayer.proxy.clear(null);
-                mockPlayer.loadExpectations(status.isEnableHeaderMatching(), status.isEnableBodyMatching());
+                mockPlayer.loadExpectations(status.getExpectationsDirectory(), status.isEnableHeaderMatching(), status.isEnableBodyMatching());
                 registerCommands(mockPlayer.proxy);
             } catch (IOException e) {
                 throw new RuntimeException("Aïe", e);
@@ -251,6 +274,8 @@ public class ProxyMockServer {
             StatusDTO statusDTO = new StatusDTO();
             statusDTO.setMode(status.getCurrentMode());
             statusDTO.setExpectationsDirectory(status.getExpectationsDirectory());
+            statusDTO.setCurrentMockSet(status.getCurrentMockSet());
+            statusDTO.setMocksSet(status.getMocksSet());
             statusDTO.setEnableHeaderMatching(status.isEnableHeaderMatching());
             statusDTO.setEnableBodyMatching(status.isEnableBodyMatching());
 
